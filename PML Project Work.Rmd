@@ -1,0 +1,86 @@
+---
+title: "PML Project Work"
+author: "Abhishek Kaul"
+date: "Saturday, March 21, 2015"
+output: html_document
+---
+
+# Weight Lifting Assingment
+
+## load the datapackages and download the file 
+
+```{r}
+library(caret)
+library(ggplot2)
+library(rpart)
+library(knitr)
+
+# get the csv file frm weblink & read the file
+##fileurl<- "https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv"
+##download.file(fileurl, destfile="pml.csv")
+##fileurl<- "https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv"
+##download.file(fileurl, destfile="test.csv")
+
+```
+
+
+## Step 2 - get familiar with data
+```{r}
+pml <- read.csv("pml.csv")
+head(pml, n=2)
+summary(pml)
+names(pml)
+qplot(classe, data=pml)
+table(complete.cases(pml))
+```
+
+## remove data elements like summations & averages
+```{r}
+ignore <- "^(kurtosis|skewness|min|max|stddev|total|var|avg|ampl)"
+data <- pml[,grep(ignore,names(pml),invert=T)]
+
+## checking complete cases
+table(complete.cases(data))
+```
+
+
+## Step 3 - create a test & train dataset
+```{r}
+data <- data[,grep("^(num_window|cvtd_timestamp|X|new_window)",names(data),invert=T)]
+inTrain <- createDataPartition(y=data$classe, p=0.75, list=FALSE)
+training <-  data[inTrain,]
+testing <- data[-inTrain,]
+
+train_predictors <- training[,-c(1,52)]
+train_outcome <- training[,c(52)]
+preProcess <- preProcess(train_predictors,method=c("center","scale","pca"),thresh=.95)
+head(predict(preProcess, train_predictors))
+
+testing_predictors <- testing[,-c(1,52)]
+testing_outcome <- testing[,c(52)]
+```
+
+Now lets make the prediction model
+
+```{r}
+# use rpart
+modelfitrpart <- train(train_outcome~.,data=train_predictors, method="rpart")
+modelfitrpart$results
+
+# Use lda
+#modelfitlda <- train(classe~.,data=training, method="lda")
+#modelfitlda$results
+
+# use rf
+#modelfitrf <- train(classe~.,data=training, method="rf")
+#modelfitrf$results
+
+# check for the testing set 
+confusionMatrix(predict(modelfitrpart,testing_predictors),testing_outcome)
+```
+## Now calculating on test data 
+
+```{r}
+test <- read.csv("test.csv")
+predict(modelfitrpart,test)
+```
